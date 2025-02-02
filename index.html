@@ -1,28 +1,43 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Chat</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
-    #chat-container { max-width: 600px; margin: 0 auto; }
-    #messages { list-style-type: none; padding: 0; }
-    #messages li { margin: 10px 0; }
-    #messages li.user { text-align: right; }
-    #messages li.ai { text-align: left; }
-    input[type="text"] { width: 80%; padding: 10px; margin-right: 10px; }
-    button { padding: 10px 20px; }
-  </style>
-</head>
-<body>
-  <div id="chat-container">
-    <h2>AI Chat</h2>
-    <ul id="messages"></ul>
-    <input type="text" id="message-input" placeholder="Type a message..." />
-    <button onclick="sendMessage()">Send</button>
-  </div>
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors'); // Add CORS
+const { OpenAI } = require('openai');
+const app = express();
+const port = process.env.PORT || 3000;
 
-  <script src="script.js"></script>
-</body>
-</html>
+// Allow CORS for all domains (can be restricted to specific origins later)
+app.use(cors());
+app.use(express.json()); // Middleware to parse incoming JSON requests
+
+// Initialize OpenAI API client with your API key
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+// Define the route for handling chat requests
+app.post('/chat', async (req, res) => {
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).send({ error: 'Message is required.' });
+  }
+
+  try {
+    // Send the user's message to the OpenAI API and get the response
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: message }],
+    });
+
+    // Return the AI's reply to the front-end
+    res.json({ reply: response.choices[0].message.content });
+  } catch (error) {
+    console.error('Error with OpenAI API:', error);
+    res.status(500).send({ error: 'Something went wrong with the AI service.' });
+  }
+});
+
+// Start the Express server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
+});
